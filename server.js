@@ -4,6 +4,7 @@ import cors from 'cors'; // ✅ Import CORS
 import memberRoutes from './routes/memberRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api', memberRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/api', transactionRoutes);
 
 
 const PORT = process.env.PORT || 5000;

@@ -50,15 +50,38 @@ export const createMember = async (req, res) => {
   };
   
 
-// Read All Members
+// Read All Members with their cards
 export const getMembers = async (req, res) => {
-  try {
-    const members = await client.fetch(`*[_type == "member"]`);
-    res.json(members);
-  } catch (err) {
-    res.status(500).json({ error: 'Error fetching members' });
-  }
-};
+    try {
+      const members = await client.fetch(`
+        *[_type == "member"] {
+          ...,
+          "card": *[_type == "card" && references(^._id)][0] {
+            _id,
+            cardId,
+            "qrCodeUrl": qrCode.asset->url,
+            issueDate,
+            expiryDate,
+            isActive
+          }
+        }
+      `);
+      
+      res.status(200).json({
+        success: true,
+        count: members.length,
+        members
+      });
+    } catch (err) {
+      console.error('Error fetching members:', err);
+      res.status(500).json({ 
+        success: false,
+        error: 'Error fetching members',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  };
+  
 
 // Get Member Detail by ID
 export const getMemberDetail = async (req, res) => {
@@ -145,16 +168,9 @@ export const deleteMember = async (req, res) => {
   }
 };
 
-// View Transactions
-export const getTransactions = async (req, res) => {
-  try {
-    const transactions = await client.fetch(`*[_type == "transaction"]`);
-    res.json(transactions);
-  } catch (err) {
-    res.status(500).json({ error: 'Error fetching transactions' });
-  }
-};
 
+
+// get transaction details
 // Dashboard Analytics
 export const getDashboardAnalytics = async (req, res) => {
   try {
