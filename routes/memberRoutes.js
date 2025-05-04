@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.post('/members', protect, createMember);
 router.get('/members', protect, getMembers);
-router.put('/members/:id', protect, updateMember);
+router.patch('/members/:id', protect, updateMember);
 router.get('/members/:id', protect, getMemberDetail);
 router.delete('/members/:id', protect, deleteMember);
 router.post('/members/:memberId/generate-card', protect, generateMemberCard);

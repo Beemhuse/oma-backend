@@ -12,6 +12,7 @@ export const createMember = async (req, res) => {
         email,
         address,
         occupation,
+        phone,
         emergencyContact,
         dateOfBirth,
         membershipStatus,
@@ -27,6 +28,7 @@ export const createMember = async (req, res) => {
         email,
         address,
         occupation,
+        phone,
         emergencyContact,
         dateOfBirth,
         membershipStatus,
@@ -34,7 +36,7 @@ export const createMember = async (req, res) => {
         socialLinks,
         image,
       };
-  
+  console.log(member)
       const created = await client.create(member);
   
       res.status(201).json({
@@ -299,11 +301,11 @@ export const verifyMember = async (req, res) => {
 };
 
 export const verifyMemberByCardId = async (req, res) => {
-    const { id } = req.params;
-  
+    const { cardId } = req.params;
+  console.log("request params", req.params)
     try {
       const card = await client.fetch(
-        `*[_type == "card" && _id == $id][0]{
+        `*[_type == "card" && cardId == $cardId][0]{
           _id,
           cardId,
           "qrCodeUrl": qrCode.asset->url,
@@ -316,12 +318,12 @@ export const verifyMemberByCardId = async (req, res) => {
             _id,
             firstName,
             lastName,
-            membershipId,
+            _createdAt,
             "image": image.asset->url,
             membershipStatus
           }
         }`,
-        { id }
+        { cardId }
       );
   
       if (!card) {

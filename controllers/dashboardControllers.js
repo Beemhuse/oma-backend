@@ -1,3 +1,5 @@
+import { client } from "../sanity/client.js";
+
 export const getDashboardStats = async (req, res) => {
     try {
       // Get current date and calculate date 6 months ago
@@ -10,11 +12,11 @@ export const getDashboardStats = async (req, res) => {
         {
           "total": count(*[_type == "member"]),
           "active": count(*[_type == "member" && membershipStatus == "Active"]),
-          "pending": count(*[_type == "member" && membershipStatus == "Pending"]),
+          "suspended": count(*[_type == "member" && membershipStatus == "Suspended"]),
           "inactive": count(*[_type == "member" && membershipStatus == "Inactive"])
         }
       `);
-  
+  console.log(stats)
       // Fetch monthly registrations
       const monthlyRegistrations = await client.fetch(`
         *[_type == "member" && _createdAt >= $sixMonthsAgo] | 
@@ -53,10 +55,8 @@ export const getDashboardStats = async (req, res) => {
   
       res.status(200).json({
         success: true,
-        data: {
-          stats,
-          monthlyRegistrations
-        }
+          stats: stats,
+          monthlyRegistrations: monthlyRegistrations
       });
   
     } catch (error) {
