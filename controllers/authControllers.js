@@ -25,19 +25,23 @@ export const register = async (req, res) => {
   res.status(201).json({ token, user: { email: newUser.email, id: newUser._id } });
 };
 
-// Login User
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await client.fetch(`*[_type == "user" && email == $email][0]`, { email });
-
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ message: 'Invalid email or password' });
-  }
-
-  const token = generateToken(user._id);
-  res.json({ token, user: { email: user.email, id: user._id } });
-};
-
+    try {
+      const { email, password } = req.body;
+      const user = await client.fetch(`*[_type == "user" && email == $email][0]`, { email });
+  
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+  
+      const token = generateToken(user._id);
+      res.json({ token, user: { email: user.email, id: user._id } });
+    } catch (err) {
+      console.error('Login error:', err);
+      res.status(500).json({ message: 'Server error', error: err.message });
+    }
+  };
+  
 // Forgot Password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
