@@ -5,6 +5,7 @@ import memberRoutes from './routes/memberRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import uploadImageRoutes from './routes/uploadImageRoutes.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', memberRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/api', transactionRoutes);
+app.use('/upload-image', uploadImageRoutes);
 
 
 const PORT = process.env.PORT || 5000;

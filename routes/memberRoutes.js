@@ -8,7 +8,7 @@ import {
   verifyMemberByCardId,
   generateMemberCard,
   getMemberDetail,
-  revokeCard
+  revokeCard,
 } from '../controllers/memberControllers.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -21,6 +21,7 @@ router.get('/members/:id', protect, getMemberDetail);
 router.delete('/members/:id', protect, deleteMember);
 router.post('/members/:memberId/generate-card', protect, generateMemberCard);
 router.patch('/members/:cardId/revoke-card', protect, revokeCard);
+// router.patch('/members/:cardId/unrevoke-card', protect, unrevokeCard);
 router.get('/verify/:code', verifyMember); // Open for scanning
 router.get('/verify-card/:cardId', verifyMemberByCardId); // Open for scanning
 
