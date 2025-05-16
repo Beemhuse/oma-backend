@@ -176,27 +176,131 @@ export const updateMember = async (req, res) => {
   const updateData = req.body;
 
   try {
-    const updated = await client.patch(id).set(updateData).commit();
-    res.json(updated);
+    const {
+      firstName,
+      lastName,
+      email,
+      address,
+      occupation,
+      phone,
+      country,
+      emergencyContact,
+      dateOfBirth,
+      membershipStatus,
+      role,
+      socialLinks,
+      image,
+    } = updateData;
+
+    const updatedFields = {
+      firstName,
+      lastName,
+      email,
+      address,
+      occupation,
+      phone,
+      country,
+      emergencyContact,
+      dateOfBirth,
+      membershipStatus,
+      role,
+      socialLinks,
+      image: image
+        ? {
+            _type: 'image',
+            asset: {
+              _type: 'reference',
+              _ref: image, // assuming you're sending only asset ID
+            }
+          }
+        : null,
+    };
+
+    const updated = await client.patch(id).set(updatedFields).commit();
+
+    res.status(200).json({
+      message: 'Member updated successfully',
+      member: updated,
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Error updating member' });
+    console.error('Error updating member:', err);
+    res.status(500).json({ message: 'Error updating member', error: err.message });
   }
 };
 
-// Delete Member
+
+
+
 export const deleteMember = async (req, res) => {
   const { id } = req.params;
 
+  if (!id) {
+    return res.status(400).json({ error: 'Member ID is required' });
+  }
+
   try {
-    await client.delete(id);
-    res.json({ message: 'Member deleted' });
+    // 1. Find all documents that reference this member
+    const query = `*[references("${id}")]`;
+    const referencingDocuments = await client.fetch(query);
+
+    // 2. Create a transaction
+    const transaction = client.transaction();
+
+    // Process each referencing document
+    referencingDocuments.forEach(doc => {
+      // Get all reference fields in the document
+      const referenceFields = Object.keys(doc)
+        .filter(key => {
+          const value = doc[key];
+          return (
+            (value && value._ref === id) || // Direct reference
+            (Array.isArray(value) && value.some(item => item && item._ref === id)) // Array of references
+          );
+        });
+
+      // Create patch for each document to remove references
+      if (referenceFields.length > 0) {
+        let patch = client.patch(doc._id);
+        
+        referenceFields.forEach(field => {
+          const value = doc[field];
+          
+          if (Array.isArray(value)) {
+            // For array fields, filter out the reference
+            const newValue = value.filter(item => !item || item._ref !== id);
+            patch = patch.set(field, newValue);
+          } else {
+            // For direct references, set to null
+            patch = patch.set(field, null);
+          }
+        });
+        
+        transaction.patch(patch);
+      }
+    });
+
+    // Add the delete operation
+    transaction.delete(id);
+
+    // 3. Commit the transaction
+    const result = await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      message: 'Member and all references deleted successfully',
+      deletedId: id,
+      patchedDocuments: referencingDocuments.map(doc => doc._id),
+      transactionId: result.transactionId
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Error deleting member' });
+    console.error('Error force deleting member:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to force delete member',
+      details: process.env.NODE_ENV === 'development' ? err : undefined
+    });
   }
 };
-
-
-
 // get transaction details
 // Dashboard Analytics
 export const getDashboardAnalytics = async (req, res) => {
