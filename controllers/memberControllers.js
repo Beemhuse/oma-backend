@@ -211,6 +211,7 @@ export const getDashboardAnalytics = async (req, res) => {
   }
 };
 
+
 export const generateMemberCard = async (req, res) => {
   const { memberId } = req.params;
 
@@ -235,15 +236,20 @@ export const generateMemberCard = async (req, res) => {
       });
     }
 
-    // Generate card ID and QR code
-    const cardId = `OMA-${shortid()}`;
+    // Generate a uniform cardId: OMA-YYYYMMDD-XXXX
+    const now = new Date();
+    const datePart = now.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+    const shortCode = shortid().slice(0, 4).toUpperCase(); // short 4-char code
+    const cardId = `OMA-${datePart}-${shortCode}`;
+
+    // Generate and upload QR code to Sanity
     const qrCodeAsset = await generateAndUploadQRCode(cardId);
 
-    // Calculate expiry date (1 year from now)
+    // Set expiry date (1 year from now)
     const expiryDate = new Date();
     expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
-    // Create new card document
+    // Create the new card document
     const newCard = await client.create({
       _type: 'card',
       member: {
@@ -268,7 +274,7 @@ export const generateMemberCard = async (req, res) => {
       message: 'Card generated successfully',
       card: {
         ...newCard,
-        qrCodeUrl: qrCodeAsset.url // Include the URL in response
+        qrCodeUrl: qrCodeAsset.url
       }
     });
   } catch (err) {
@@ -280,6 +286,7 @@ export const generateMemberCard = async (req, res) => {
     });
   }
 };
+
 export const revokeCard = async (req, res) => {
   const { cardId } = req.params;
   const { reason } = req.body;

@@ -4,12 +4,12 @@ import { client } from '../sanity/client.js';
 export async function generateAndUploadQRCode(memberId) {
     try {
       // Create verification URL with member ID as query parameter
-      const verificationUrl = `https://oma-member-hub-verify.vercel.app/verify?id=${memberId}`;
+      const verificationUrl = `https://onemapafrica.org/verify?id=${memberId}`;
       
       // Generate QR code as data URL pointing to verification URL
       const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
         errorCorrectionLevel: 'H', // High error correction
-        margin: 2, // White space around QR code
+        margin: 4, // White space around QR code
         width: 300 // Size of QR code
       });
       
