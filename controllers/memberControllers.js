@@ -16,6 +16,7 @@ export const createMember = async (req, res) => {
       country,
       emergencyContact,
       dateOfBirth,
+      dateJoined,
       membershipStatus,
       role,
       socialLinks,
@@ -33,6 +34,7 @@ export const createMember = async (req, res) => {
       country,
       emergencyContact,
       dateOfBirth,
+      dateJoined,
       membershipStatus,
       role,
       socialLinks,
@@ -76,6 +78,7 @@ export const getMembers = async (req, res) => {
         country,
         emergencyContact,
         dateOfBirth,
+        dateJoined,
         membershipStatus,
         role,
         socialLinks,
@@ -124,6 +127,7 @@ export const getMemberDetail = async (req, res) => {
         country,
         address,
         dateOfBirth,
+        dateJoined,
         occupation,
         emergencyContact,
         membershipStatus,
@@ -142,7 +146,7 @@ export const getMemberDetail = async (req, res) => {
 
     // Fetch active card for this member (if exists)
     const card = await client.fetch(
-      `*[_type == "card" && references($id) && isActive == true][0]{
+      `*[_type == "card" && references($id)][0]{
         _id,
         cardId,
         "qrCodeUrl": qrCode.asset->url,
@@ -158,7 +162,7 @@ export const getMemberDetail = async (req, res) => {
     res.status(200).json({
       success: true,
       member,
-      card: card || null
+      card: card
     });
   } catch (err) {
     console.error('Error fetching member details:', err);
@@ -169,6 +173,66 @@ export const getMemberDetail = async (req, res) => {
     });
   }
 };
+
+// // Update Member
+// export const updateMember = async (req, res) => {
+//   const { id } = req.params;
+//   const updateData = req.body;
+
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       email,
+//       address,
+//       occupation,
+//       phone,
+//       country,
+//       emergencyContact,
+//       dateOfBirth,
+//       dateJoined,
+//       membershipStatus,
+//       role,
+//       socialLinks,
+//       image,
+//     } = updateData;
+
+//     const updatedFields = {
+//       firstName,
+//       lastName,
+//       email,
+//       address,
+//       occupation,
+//       phone,
+//       country,
+//       emergencyContact,
+//       dateOfBirth,
+//       dateJoined,
+//       membershipStatus,
+//       role,
+//       socialLinks,
+//       image: image
+//         ? {
+//             _type: 'image',
+//             asset: {
+//               _type: 'reference',
+//               _ref: image, // assuming you're sending only asset ID
+//             }
+//           }
+//         : null,
+//     };
+
+//     const updated = await client.patch(id).set(updatedFields).commit();
+
+//     res.status(200).json({
+//       message: 'Member updated successfully',
+//       member: updated,
+//     });
+//   } catch (err) {
+//     console.error('Error updating member:', err);
+//     res.status(500).json({ message: 'Error updating member', error: err.message });
+//   }
+// };
 
 // Update Member
 export const updateMember = async (req, res) => {
@@ -186,12 +250,14 @@ export const updateMember = async (req, res) => {
       country,
       emergencyContact,
       dateOfBirth,
+      dateJoined,
       membershipStatus,
       role,
       socialLinks,
       image,
     } = updateData;
 
+    // Prepare updatedFields object without image initially
     const updatedFields = {
       firstName,
       lastName,
@@ -202,22 +268,30 @@ export const updateMember = async (req, res) => {
       country,
       emergencyContact,
       dateOfBirth,
+      dateJoined,
       membershipStatus,
       role,
       socialLinks,
-      image: image
-        ? {
-            _type: 'image',
-            asset: {
-              _type: 'reference',
-              _ref: image, // assuming you're sending only asset ID
-            }
-          }
-        : null,
     };
 
-    const updated = await client.patch(id).set(updatedFields).commit();
+    // Only set image if it's NOT a URL (does NOT contain 'https')
+    // and is truthy (assumed asset ID)
+    if (image && typeof image === 'string' && !image.startsWith('https')) {
+      updatedFields.image = {
+        _type: 'image',
+        asset: {
+          _type: 'reference',
+          _ref: image, // assuming you're sending only asset ID
+        },
+      };
+    }
+    // If image is null or undefined, you can handle removal if needed (optional)
+    else if (image === null) {
+      updatedFields.image = null;
+    }
 
+    const updated = await client.patch(id).set(updatedFields).commit();
+console.log(updated, "updated")
     res.status(200).json({
       message: 'Member updated successfully',
       member: updated,
@@ -227,7 +301,6 @@ export const updateMember = async (req, res) => {
     res.status(500).json({ message: 'Error updating member', error: err.message });
   }
 };
-
 
 
 
@@ -260,22 +333,22 @@ export const deleteMember = async (req, res) => {
 
       // Create patch for each document to remove references
       if (referenceFields.length > 0) {
-        let patch = client.patch(doc._id);
+        const patchOperations = {};
         
         referenceFields.forEach(field => {
           const value = doc[field];
           
           if (Array.isArray(value)) {
             // For array fields, filter out the reference
-            const newValue = value.filter(item => !item || item._ref !== id);
-            patch = patch.set(field, newValue);
+            patchOperations[field] = value.filter(item => !item || item._ref !== id);
           } else {
             // For direct references, set to null
-            patch = patch.set(field, null);
+            patchOperations[field] = null;
           }
         });
         
-        transaction.patch(patch);
+        // Apply all patch operations at once
+        transaction.patch(doc._id, patch => patch.set(patchOperations));
       }
     });
 
@@ -434,6 +507,53 @@ export const revokeCard = async (req, res) => {
     });
   }
 };
+export const reactivateCard = async (req, res) => {
+  const { cardId } = req.params;
+  const { reason } = req.body;
+
+  try {
+    // Check if card exists
+    const card = await client.getDocument(cardId);
+    if (!card) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Card not found' 
+      });
+    }
+
+    // Check if already active
+    if (card.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Card is already active'
+      });
+    }
+
+    // Reactivate the card
+    const reactivatedCard = await client
+      .patch(cardId)
+      .set({
+        isActive: true,
+        reactivatedAt: new Date().toISOString(),
+        reactivationReason: reason || 'Reinstated',
+        $unset: ['revokedAt', 'revocationReason'] // Remove revocation fields
+      })
+      .commit();
+
+    res.status(200).json({
+      success: true,
+      message: 'Card reactivated successfully',
+      card: reactivatedCard
+    });
+  } catch (err) {
+    console.error('Error reactivating card:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+};
 // Verify Member by ID or QR
 export const verifyMember = async (req, res) => {
   const { code } = req.params;
@@ -471,6 +591,7 @@ export const verifyMemberByCardId = async (req, res) => {
             _id,
             firstName,
             lastName,
+            dateJoined,
             _createdAt,
             "image": image.asset->url,
             membershipStatus

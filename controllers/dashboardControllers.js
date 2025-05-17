@@ -2,6 +2,8 @@
 import { client } from "../sanity/client.js";
 import { cachedFetch } from "../utils/cache.js";
 
+const CACHE_DURATION = 5 * 60 * 1000; 
+
 // Cache keys
 const CACHE_KEYS = {
   MEMBER_STATS: 'member-stats',

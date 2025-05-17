@@ -9,6 +9,7 @@ import {
   generateMemberCard,
   getMemberDetail,
   revokeCard,
+  reactivateCard,
 } from '../controllers/memberControllers.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -21,7 +22,7 @@ router.get('/members/:id', protect, getMemberDetail);
 router.delete('/members/:id', protect, deleteMember);
 router.post('/members/:memberId/generate-card', protect, generateMemberCard);
 router.patch('/members/:cardId/revoke-card', protect, revokeCard);
-// router.patch('/members/:cardId/unrevoke-card', protect, unrevokeCard);
+router.patch('/members/:cardId/reactivate-card', protect, reactivateCard);
 router.get('/verify/:code', verifyMember); // Open for scanning
 router.get('/verify-card/:cardId', verifyMemberByCardId); // Open for scanning
 

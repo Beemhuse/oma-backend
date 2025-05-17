@@ -4,7 +4,7 @@ import { client } from '../sanity/client.js';
 export async function generateAndUploadQRCode(memberId) {
     try {
       // Create verification URL with member ID as query parameter
-      const verificationUrl = `https://onemapafrica.org/verify?id=${memberId}`;
+      const verificationUrl = `https://www.onemapafrica.org/verify?id=${memberId}`;
       
       // Generate QR code as data URL pointing to verification URL
       const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
